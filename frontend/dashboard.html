@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SME Record — Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="icon" href="./img/favicon.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="api.js"></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fa-solid fa-book-open"></i></div>
+      <span class="brand-text">SME Record</span>
+    </div>
+
+    <div class="sidebar-user">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div class="user-avatar" id="userInitials">?</div>
+        <div class="user-info">
+          <div class="user-name" id="sidebarName">Loading...</div>
+          <div class="user-biz" id="sidebarBiz">—</div>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="book-switcher">
+        <i class="fa-solid fa-book" style="color:var(--primary); font-size:13px;"></i>
+        <label for="activeBookSelect" class="sr-only">Select active record book</label>
+        <select id="activeBookSelect" data-change="onBookSwitch"></select>
+      </div>
+      <div class="nav-section-label">Main</div>
+      <button class="nav-link active" data-page="dashboard">
+        <i class="fa-solid fa-chart-pie"></i> Dashboard
+      </button>
+      <button class="nav-link" data-page="transactions">
+        <i class="fa-solid fa-list-ul"></i> All Transactions
+      </button>
+
+      <div class="nav-section-label">Manage</div>
+      <button class="nav-link" data-page="addIncome">
+        <i class="fa-solid fa-circle-plus"></i> Add Income
+      </button>
+      <button class="nav-link" data-page="addExpense">
+        <i class="fa-solid fa-circle-minus"></i> Add Expense
+      </button>
+      <button class="nav-link" data-page="categories">
+        <i class="fa-solid fa-tags"></i> Categories
+      </button>
+      <button class="nav-link" data-page="books">
+        <i class="fa-solid fa-book"></i> Record Books
+      </button>
+
+      <div class="nav-section-label">Insights</div>
+      <button class="nav-link" data-page="reports">
+        <i class="fa-solid fa-chart-bar"></i> Reports
+      </button>
+
+      <div class="nav-section-label">Account</div>
+      <button class="nav-link" data-page="settings">
+        <i class="fa-solid fa-gear"></i> Settings
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="nav-link" id="logoutBtn" style="color:rgba(255,77,109,0.6)">
+        <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN -->
+  <div class="main-wrap">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <button class="hamburger" data-action="toggleSidebar" aria-label="Toggle sidebar navigation">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <span class="page-title" id="pageTitle">Dashboard</span>
+
+      <div class="topbar-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <label for="globalSearch" class="sr-only">Search transactions</label>
+        <input type="text" placeholder="Search transactions..." id="globalSearch" data-input="handleSearch" />
+      </div>
+
+      <div class="topbar-actions">
+        <button class="icon-btn" data-action="exportCSV" title="Export CSV" aria-label="Export CSV">
+          <i class="fa-solid fa-file-csv"></i>
+        </button>
+        <button class="icon-btn" data-action="showNotifications" title="Notifications" aria-label="Notifications">
+          <i class="fa-regular fa-bell"></i>
+          <span class="notification-badge" id="notifBadge" aria-hidden="true"></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <div class="page-content">
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="page active" id="page-dashboard">
+        <!-- Period filter -->
+        <div class="filter-bar" style="margin-bottom:18px;">
+          <label for="dashPeriod" class="sr-only">Filter period</label>
+          <select id="dashPeriod" data-change="refreshDashboard()">
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month" selected>This Month</option>
+          </select>
+        </div>
+
+        <div class="summary-cards">
+          <div class="s-card income">
+            <div class="card-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+            <div class="card-label">Total Income</div>
+            <div class="card-amount" id="dashIncome">₦0</div>
+            <div class="card-change" id="dashIncomeTx">0 transactions</div>
+          </div>
+          <div class="s-card expense">
+            <div class="card-icon"><i class="fa-solid fa-arrow-trend-down"></i></div>
+            <div class="card-label">Total Expenses</div>
+            <div class="card-amount" id="dashExpense">₦0</div>
+            <div class="card-change" id="dashExpenseTx">0 transactions</div>
+          </div>
+          <div class="s-card balance">
+            <div class="card-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+            <div class="card-label">Net Balance</div>
+            <div class="card-amount" id="dashBalance">₦0</div>
+            <div class="card-change" id="dashBalanceNote">Income minus expenses</div>
+          </div>
+          <div class="s-card cash">
+            <div class="card-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
+            <div class="card-label">Cash on Hand</div>
+            <div class="card-amount" id="dashCash">₦0</div>
+            <div class="card-change" id="dashCashNote">Cash transactions</div>
+          </div>
+        </div>
+
+        <div class="charts-row">
+          <div class="chart-card">
+            <div class="chart-header">
+              <span class="chart-title">Income vs Expense</span>
+              <div class="chart-legend">
+                <span><span class="legend-dot" style="background:var(--primary)"></span>Income</span>
+                <span><span class="legend-dot" style="background:var(--red)"></span>Expense</span>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="barChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header">
+              <span class="chart-title">Expense Breakdown</span>
+            </div>
+            <div class="chart-container">
+              <canvas id="pieChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <span class="section-title">Recent Transactions</span>
+          <button class="see-all" data-page="transactions">See all <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+
+        <div class="tx-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Method</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody id="recentTxBody">
+              <tr>
+                <td colspan="6">
+                  <div class="empty-state"><i class="fa-solid fa-receipt"></i>
+                    <p>No transactions yet. Add your first one!</p>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ ALL TRANSACTIONS ══ -->
+      <div class="page" id="page-transactions">
+        <div class="filter-bar">
+          <select id="filterType" data-change="renderTransactionsPage">
+            <option value="">All Types</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+          <select id="filterMethod" data-change="renderTransactionsPage">
+            <option value="">All Methods</option>
+            <option value="cash">Cash</option>
+            <option value="bank">Bank</option>
+          </select>
+          <select id="filterCategory" data-change="renderTransactionsPage">
+            <option value="">All Categories</option>
+          </select>
+          <input type="date" id="filterFrom" data-change="renderTransactionsPage" title="From date" />
+          <input type="date" id="filterTo" data-change="renderTransactionsPage" title="To date" />
+          <button class="btn-outline" data-action="clearFilters" style="padding:8px 12px; font-size:13px;">
+            <i class="fa-solid fa-xmark"></i> Clear
+          </button>
+        </div>
+
+        <div class="tx-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Category</th>
+                <th>Sub-Category</th>
+                <th>Description</th>
+                <th>Method</th>
+                <th>Amount</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="allTxBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ ADD INCOME ══ -->
+      <div class="page" id="page-addIncome">
+        <div class="form-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2><i class="fa-solid fa-circle-plus" style="color:var(--primary); margin-right:8px;"></i>Add Income</h2>
+            <button class="modal-close" data-action="showPage" data-value="dashboard"
+              aria-label="Close">&times;</button>
+          </div>
+          <div class="type-toggle">
+            <button class="active-income" data-action="setTxType" data-value="income">
+              <i class="fa-solid fa-arrow-up"></i> Income
+            </button>
+            <button data-action="switchToExpense">
+              <i class="fa-solid fa-arrow-down"></i> Expense
+            </button>
+          </div>
+          <div class="form-grid" id="txForm">
+            <div class="form-group">
+              <label for="txAmount">Amount (₦)</label>
+              <input type="number" id="txAmount" placeholder="0.00" min="0" step="0.01" />
+            </div>
+            <div class="form-group">
+              <label for="txMethod">Payment Method</label>
+              <select id="txMethod">
+                <option value="cash">Cash</option>
+                <option value="bank">Bank Transfer</option>
+                <option value="pos">POS</option>
+                <option value="mobile">Mobile Money</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="txCategory">Category</label>
+              <select id="txCategory" data-change="loadSubCategories">
+                <option value="">Select category</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="txSubCategory">Sub-Category</label>
+              <select id="txSubCategory">
+                <option value="">Select sub-category</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label for="txDesc">Description / Note</label>
+              <textarea id="txDesc" placeholder="What is this transaction for?"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="txDate">Date</label>
+              <input type="date" id="txDate" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-outline" data-action="clearTxForm">Clear</button>
+            <button class="btn-green" data-action="saveTransaction">
+              <i class="fa-solid fa-floppy-disk"></i> Save Transaction
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ADD EXPENSE ══ -->
+      <div class="page" id="page-addExpense">
+        <div class="form-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2><i class="fa-solid fa-circle-minus" style="color:var(--red); margin-right:8px;"></i>Add Expense</h2>
+            <button class="modal-close" data-action="showPage" data-value="dashboard"
+              aria-label="Close">&times;</button>
+          </div>
+          <div class="type-toggle">
+            <button data-action="switchToIncome">
+              <i class="fa-solid fa-arrow-up"></i> Income
+            </button>
+            <button class="active-expense" data-action="setTxType" data-value="expense">
+              <i class="fa-solid fa-arrow-down"></i> Expense
+            </button>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="txAmount2">Amount (₦)</label>
+              <input type="number" id="txAmount2" placeholder="0.00" min="0" step="0.01" />
+            </div>
+            <div class="form-group">
+              <label for="txMethod2">Payment Method</label>
+              <select id="txMethod2">
+                <option value="cash">Cash</option>
+                <option value="bank">Bank Transfer</option>
+                <option value="pos">POS</option>
+                <option value="mobile">Mobile Money</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="txCategory2">Category</label>
+              <select id="txCategory2" data-change="loadSubCategories2">
+                <option value="">Select category</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="txSubCategory2">Sub-Category</label>
+              <select id="txSubCategory2">
+                <option value="">Select sub-category</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label for="txDesc2">Description / Note</label>
+              <textarea id="txDesc2" placeholder="What is this expense for?"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="txDate2">Date</label>
+              <input type="date" id="txDate2" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-outline" data-action="clearTxForm2">Clear</button>
+            <button class="btn-green" data-action="saveTransaction2">
+              <i class="fa-solid fa-floppy-disk"></i> Save Transaction
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CATEGORIES ══ -->
+      <div class="page" id="page-categories">
+        <div style="margin-bottom:16px;">
+          <button class="btn-green" style="width:auto; padding:10px 18px;" data-action="openCatModal">
+            <i class="fa-solid fa-plus"></i> New Category
+          </button>
+        </div>
+        <div class="cat-grid" id="catGrid">
+          <div class="empty-state"><i class="fa-solid fa-tags"></i>
+            <p>No categories yet.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ RECORD BOOKS ══ -->
+      <div class="page" id="page-books">
+        <div class="books-grid" id="booksGrid">
+          <div class="add-book-card" data-action="openBookModal">
+            <i class="fa-solid fa-plus"></i>
+            <span>New Record Book</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ REPORTS ══ -->
+      <div class="page" id="page-reports">
+        <div class="reports-grid">
+          <div class="report-card">
+            <div class="chart-title" style="margin-bottom:14px;"><i class="fa-solid fa-calendar"
+                style="color:var(--primary); margin-right:6px;"></i>Monthly Summary</div>
+            <div class="chart-container small">
+              <canvas id="monthlyChart"></canvas>
+            </div>
+          </div>
+          <div class="report-card">
+            <div class="chart-title" style="margin-bottom:14px;"><i class="fa-solid fa-wallet"
+                style="color:var(--blue); margin-right:6px;"></i>Cash vs Bank</div>
+            <div class="chart-container small">
+              <canvas id="methodChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="report-card">
+          <div class="chart-title" style="margin-bottom:14px;"><i class="fa-solid fa-layer-group"
+              style="color:var(--gold); margin-right:6px;"></i>Category Breakdown</div>
+          <div id="categoryBreakdown"
+            style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap:12px; margin-top:12px;">
+          </div>
+        </div>
+        <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn-green" style="width:auto; padding:10px 18px;" data-action="exportCSV">
+            <i class="fa-solid fa-file-csv"></i> Export CSV
+          </button>
+          <button class="btn-outline" data-action="downloadBackup">
+            <i class="fa-solid fa-download"></i> Download Backup (JSON)
+          </button>
+        </div>
+      </div>
+
+      <!-- ══ SETTINGS ══ -->
+      <div class="page" id="page-settings">
+        <div class="form-card">
+          <h2><i class="fa-solid fa-gear" style="color:var(--text-sec); margin-right:8px;"></i>Settings</h2>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label for="settingName">Full Name</label>
+              <input type="text" id="settingName" placeholder="Your name" />
+            </div>
+            <div class="form-group full">
+              <label for="settingBiz">Business Name</label>
+              <input type="text" id="settingBiz" placeholder="Business name" />
+            </div>
+            <div class="form-group full">
+              <label for="settingEmail">Email</label>
+              <input type="email" id="settingEmail" placeholder="Email address" />
+            </div>
+            <div class="form-group">
+              <label for="settingCurrency">Currency Symbol</label>
+              <select id="settingCurrency">
+                <option value="₦">₦ (Naira)</option>
+                <option value="$">$ (Dollar)</option>
+                <option value="€">€ (Euro)</option>
+                <option value="£">£ (Pound)</option>
+                <option value="GH₵">GH₵ (Cedi)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-green" data-action="saveSettings">
+              <i class="fa-solid fa-floppy-disk"></i> Save Settings
+            </button>
+          </div>
+
+          <!-- ── CHANGE PASSWORD ───────────────────────────── -->
+          <div style="margin-top:28px; padding-top:20px; border-top:1px solid var(--border);">
+            <p style="font-size:14px; font-weight:600; color:var(--text); margin-bottom:14px;">
+              <i class="fa-solid fa-lock" style="margin-right:6px; color:var(--text-sec);"></i>Change Password
+            </p>
+            <div class="form-grid">
+              <div class="form-group full">
+                <label for="settingCurrentPw">Current Password</label>
+                <input type="password" id="settingCurrentPw" placeholder="Enter your current password" autocomplete="current-password" />
+              </div>
+              <div class="form-group full">
+                <label for="settingNewPw">New Password</label>
+                <input type="password" id="settingNewPw" placeholder="Minimum 6 characters" autocomplete="new-password" />
+              </div>
+              <div class="form-group full">
+                <label for="settingConfirmPw">Confirm New Password</label>
+                <input type="password" id="settingConfirmPw" placeholder="Repeat new password" autocomplete="new-password" />
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn-green" data-action="changePassword">
+                <i class="fa-solid fa-key"></i> Update Password
+              </button>
+            </div>
+          </div>
+
+          <!-- ── DANGER ZONE ───────────────────────────────── -->
+          <div style="margin-top:28px; padding-top:20px; border-top:1px solid var(--border);">
+            <p style="font-size:13px; color:var(--text-sec); margin-bottom:12px;">Danger Zone</p>
+            <button class="btn-outline" style="border-color:var(--red); color:var(--red);" data-action="clearAllData">
+              <i class="fa-solid fa-trash"></i> Clear All Data
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end page-content -->
+  </div><!-- end main-wrap -->
+
+  <!-- FLOATING ACTION BUTTON (Mobile) -->
+  <button class="fab" data-page="addIncome" id="fab" aria-label="Add income transaction">
+    <i class="fa-solid fa-plus"></i>
+  </button>
+
+  <!-- MODAL: Add Category -->
+  <div class="modal-overlay" id="catModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">New Category</span>
+        <button class="modal-close" data-action="closeModal" data-target="catModal" aria-label="Close modal"><i
+            class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="form-group">
+          <label for="catName">Category Name</label>
+          <div style="position:relative;">
+            <input type="text" id="catName" placeholder="e.g. Sales, Transport, Food" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="catType">Type</label>
+          <select id="catType">
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="catSubs">Sub-categories (comma separated)</label>
+          <input type="text" id="catSubs" placeholder="e.g. Retail, Wholesale, Online" />
+        </div>
+        <button class="btn-green" data-action="saveCategory">
+          <i class="fa-solid fa-plus"></i> Add Category
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add Record Book -->
+  <div class="modal-overlay" id="bookModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">New Record Book</span>
+        <button class="modal-close" data-action="closeModal" data-target="bookModal" aria-label="Close modal"><i
+            class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <div class="form-group">
+          <label for="bookName">Book Name</label>
+          <input type="text" id="bookName" placeholder="e.g. Main Business, Side Hustle" />
+        </div>
+        <div class="form-group">
+          <label for="bookCurrency">Currency</label>
+          <select id="bookCurrency">
+            <option value="NGN">₦ Nigerian Naira</option>
+            <option value="USD">$ US Dollar</option>
+            <option value="EUR">€ Euro</option>
+            <option value="GBP">£ British Pound</option>
+            <option value="GHS">GH₵ Ghana Cedi</option>
+          </select>
+        </div>
+        <button class="btn-green" data-action="saveBook">
+          <i class="fa-solid fa-plus"></i> Create Book
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toast-container"></div>
+  <script src="js/dashboard.js"></script>
+</body>
+
+</html>

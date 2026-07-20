@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SME Record — Admin Panel</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap"
+    rel="stylesheet" />
+  <link rel="icon" href="./img/favicon.png" type="image/png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="api.js"></script>
+</head>
+
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <div class="brand-text">
+        <div class="brand-name">SME Record</div>
+        <span class="brand-badge">Admin Panel</span>
+      </div>
+    </div>
+
+    <div class="admin-user">
+      <div class="admin-avatar" id="adminInitials">A</div>
+      <div class="admin-info">
+        <div class="admin-name" id="adminName">Administrator</div>
+        <div class="admin-role">Super Admin</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" aria-label="Primary navigation">
+      <div class="nav-label">Overview</div>
+      <button class="nav-link active" data-page="overview">
+        <i class="fa-solid fa-chart-pie"></i> Overview
+      </button>
+      <button class="nav-link" data-page="analytics">
+        <i class="fa-solid fa-chart-line"></i> Analytics
+      </button>
+
+      <div class="nav-label">Users</div>
+      <button class="nav-link" data-page="users">
+        <i class="fa-solid fa-users"></i> All Users
+        <span class="badge" id="pendingBadge" style="display:none">0</span>
+      </button>
+      <button class="nav-link" data-page="userActivity">
+        <i class="fa-solid fa-person-running"></i> Activity Log
+      </button>
+
+      <div class="nav-label">Operations</div>
+      <button class="nav-link" data-page="transactions">
+        <i class="fa-solid fa-list-ul"></i> All Transactions
+      </button>
+      <button class="nav-link" data-page="notifications">
+        <i class="fa-solid fa-bell"></i> Notifications
+      </button>
+      <button class="nav-link" data-page="feedback">
+        <i class="fa-solid fa-comment-dots"></i> Feedback
+      </button>
+
+      <div class="nav-label">System</div>
+      <button class="nav-link" data-page="settings">
+        <i class="fa-solid fa-sliders"></i> Settings
+      </button>
+      <button class="nav-link" data-page="maintenance">
+        <i class="fa-solid fa-wrench"></i> Maintenance
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="nav-link" id="adminBackBtn" style="color:rgba(255,255,255,0.3)">
+        <i class="fa-solid fa-arrow-left"></i> Back to App
+      </button>
+      <button class="nav-link" id="adminLogoutBtn" style="color:rgba(255,77,109,0.6)">
+        <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN -->
+  <main class="main-wrap" role="main" aria-label="Admin main content">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <button class="hamburger" id="toggleSidebarBtn" aria-label="Toggle sidebar navigation">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <span class="topbar-title" id="pageTitle">Overview</span>
+
+      <div class="topbar-search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <label for="globalSearch" class="sr-only">Search users and transactions</label>
+        <input type="text" placeholder="Search users, transactions..." id="globalSearch" />
+      </div>
+
+      <button class="icon-btn" id="notificationsBtn" title="Notifications" aria-label="Notifications">
+        <i class="fa-regular fa-bell"></i>
+        <span class="notif-dot" id="notifDot"></span>
+      </button>
+
+      <button class="icon-btn" id="refreshDataBtn" title="Refresh" aria-label="Refresh data">
+        <i class="fa-solid fa-rotate-right"></i>
+      </button>
+    </header>
+
+    <div class="page-content">
+
+      <!-- ══ OVERVIEW PAGE ══ -->
+      <div class="page active" id="page-overview">
+        <div class="stat-grid">
+          <div class="stat-card users">
+            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+            <div class="stat-label">Total Users</div>
+            <div class="stat-value" id="statTotalUsers">0</div>
+            <div class="stat-sub up" id="statNewUsers">+0 this month</div>
+          </div>
+          <div class="stat-card active">
+            <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="stat-label">Active Users</div>
+            <div class="stat-value" id="statActiveUsers">0</div>
+            <div class="stat-sub" id="statActiveRate">0% of total</div>
+          </div>
+          <div class="stat-card suspended">
+            <div class="stat-icon"><i class="fa-solid fa-ban"></i></div>
+            <div class="stat-label">Suspended</div>
+            <div class="stat-value" id="statSuspended">0</div>
+            <div class="stat-sub down" id="statSuspendedNote">—</div>
+          </div>
+          <div class="stat-card revenue">
+            <div class="stat-icon"><i class="fa-solid fa-arrow-trend-up"></i></div>
+            <div class="stat-label">Total Income Logged</div>
+            <div class="stat-value" id="statIncome">₦0</div>
+            <div class="stat-sub up" id="statIncomeSub">across all books</div>
+          </div>
+          <div class="stat-card txs">
+            <div class="stat-icon"><i class="fa-solid fa-receipt"></i></div>
+            <div class="stat-label">Transactions</div>
+            <div class="stat-value" id="statTxs">0</div>
+            <div class="stat-sub" id="statTxsSub">total records</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">User Registrations (Last 6 Months)</span>
+            </div>
+            <div class="panel-body">
+              <div class="chart-container">
+                <canvas id="regChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">User Status Breakdown</span>
+            </div>
+            <div class="panel-body">
+              <div class="chart-container">
+                <canvas id="statusChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Users -->
+        <div class="panel" style="margin-bottom:20px;">
+          <div class="panel-header">
+            <span class="panel-title">Recent Registrations</span>
+            <button class="btn btn-outline btn-sm" data-page="users">View All</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Business</th>
+                  <th>Email</th>
+                  <th>Joined</th>
+                  <th>Transactions</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="recentUsersBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent Activity Log -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Recent Activity</span>
+            <button class="btn btn-outline btn-sm" data-page="userActivity">Full Log</button>
+          </div>
+          <div class="panel-body" id="recentActivityLog"></div>
+        </div>
+      </div>
+
+      <!-- ══ ANALYTICS PAGE ══ -->
+      <div class="page" id="page-analytics">
+        <div class="three-col">
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Income vs Expense</span></div>
+            <div class="panel-body">
+              <div class="chart-container"><canvas id="analyticsBar"></canvas></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Payment Methods</span></div>
+            <div class="panel-body">
+              <div class="chart-container"><canvas id="analyticsMethod"></canvas></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Top Categories</span></div>
+            <div class="panel-body" id="topCategories"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Platform Growth — Monthly Transactions</span>
+          </div>
+          <div class="panel-body">
+            <div class="chart-container small">
+              <canvas id="growthChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ USERS PAGE ══ -->
+      <div class="page" id="page-users">
+        <div class="panel">
+          <div class="filter-bar">
+            <label for="filterStatus" class="sr-only">Filter users by status</label>
+            <select id="filterStatus">
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="suspended">Suspended</option>
+            </select>
+            <label for="searchUser" class="sr-only">Search users by name, email, or business</label>
+            <input type="text" id="searchUser" placeholder="Search by name, email, business..."
+              style="min-width:220px;" />
+            <button class="btn btn-outline btn-sm" id="clearUserFiltersBtn">
+              <i class="fa-solid fa-xmark"></i> Clear
+            </button>
+            <div style="margin-left:auto; display:flex; gap:8px;">
+              <button class="btn btn-purple btn-sm" id="openNotifModalBtn">
+                <i class="fa-solid fa-bell"></i> Broadcast
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Business Name</th>
+                  <th>Email</th>
+                  <th>Joined</th>
+                  <th>Transactions</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
+          <div class="pagination" id="userPagination"></div>
+        </div>
+      </div>
+
+      <!-- ══ ACTIVITY LOG PAGE ══ -->
+      <div class="page" id="page-userActivity">
+        <div class="panel">
+          <div class="filter-bar">
+            <label for="filterLogType" class="sr-only">Filter activity log by type</label>
+            <select id="filterLogType">
+              <option value="">All Events</option>
+              <option value="register">Register</option>
+              <option value="login">Login</option>
+              <option value="suspend">Suspend</option>
+              <option value="notif">Notification</option>
+              <option value="tx">Transaction</option>
+            </select>
+            <label for="filterLogDate" class="sr-only">Filter activity log by date</label>
+            <input type="date" id="filterLogDate" />
+            <button class="btn btn-outline btn-sm" id="clearLogFiltersBtn">
+              <i class="fa-solid fa-xmark"></i> Clear
+            </button>
+            <button class="btn btn-red btn-sm" style="margin-left:auto;" id="clearActivityLogBtn">
+              <i class="fa-solid fa-trash"></i> Clear Log
+            </button>
+          </div>
+          <div class="panel-body" id="fullActivityLog"></div>
+          <div class="pagination" id="logPagination"></div>
+        </div>
+      </div>
+
+      <!-- ══ ALL TRANSACTIONS PAGE ══ -->
+      <div class="page" id="page-transactions">
+
+        <!-- Privacy notice banner -->
+        <div style="background:var(--blue-bg,rgba(59,130,246,0.08));border:1px solid var(--blue,#3b82f6);border-radius:10px;padding:12px 16px;margin-bottom:18px;display:flex;align-items:flex-start;gap:10px;">
+          <i class="fa-solid fa-shield-halved" style="color:var(--blue,#3b82f6);margin-top:2px;flex-shrink:0;"></i>
+          <div style="font-size:12.5px;color:var(--ink);">
+            <strong>NDPR Privacy Protection.</strong>
+            Individual user transaction records are private financial data. This page shows only anonymised platform-wide statistics in compliance with Nigeria's Data Protection Regulation (NDPR).
+            Admins cannot view a user's specific transactions, amounts, or descriptions.
+          </div>
+        </div>
+
+        <!-- Platform volume summary cards -->
+        <div class="stats-grid" style="margin-bottom:18px;">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--blue-bg);color:var(--blue);"><i class="fa-solid fa-receipt"></i></div>
+            <div class="stat-body">
+              <div class="stat-val" id="statTotalTxCount">—</div>
+              <div class="stat-lbl">Total Transactions</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--green-bg);color:var(--green);"><i class="fa-solid fa-arrow-trend-up"></i></div>
+            <div class="stat-body">
+              <div class="stat-val" id="statPlatformIncome">—</div>
+              <div class="stat-lbl">Total Platform Income</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--red-bg);color:var(--red);"><i class="fa-solid fa-arrow-trend-down"></i></div>
+            <div class="stat-body">
+              <div class="stat-val" id="statPlatformExpense">—</div>
+              <div class="stat-lbl">Total Platform Expenses</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--gold-bg,rgba(245,158,11,0.1));color:var(--gold,#f59e0b);"><i class="fa-solid fa-chart-simple"></i></div>
+            <div class="stat-body">
+              <div class="stat-val" id="statAvgTxPerUser">—</div>
+              <div class="stat-lbl">Avg Transactions / User</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--purple-bg,rgba(139,92,246,0.1));color:var(--purple,#8b5cf6);"><i class="fa-solid fa-book-open"></i></div>
+            <div class="stat-body">
+              <div class="stat-val" id="statActiveBooks">—</div>
+              <div class="stat-lbl">Active Record Books</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Category distribution + Method breakdown -->
+        <div class="two-col" style="margin-bottom:18px;">
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><i class="fa-solid fa-tag" style="margin-right:6px;color:var(--purple);"></i>Top Categories (Platform)</span>
+            </div>
+            <div class="panel-body" id="txCategoryDistribution">
+              <div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>Loading...</p></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><i class="fa-solid fa-credit-card" style="margin-right:6px;color:var(--blue);"></i>Payment Methods</span>
+            </div>
+            <div class="panel-body" id="txMethodBreakdown">
+              <div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>Loading...</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly trend (counts only) -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title"><i class="fa-solid fa-chart-line" style="margin-right:6px;color:var(--green);"></i>Monthly Transaction Count</span>
+            <span style="font-size:11px;color:var(--ink-soft);margin-left:8px;">(counts only — amounts are private)</span>
+          </div>
+          <div class="panel-body" id="txMonthlyTrend">
+            <div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>Loading...</p></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ══ NOTIFICATIONS PAGE ══ -->
+      <div class="page" id="page-notifications">
+        <div class="two-col">
+
+          <!-- Compose -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title"><i class="fa-solid fa-paper-plane"
+                  style="color:var(--purple);margin-right:6px;"></i>Compose Notification</span>
+            </div>
+            <div class="panel-body">
+              <div style="margin-bottom:14px;">
+                <div class="form-group" style="margin-bottom:12px;">
+                  <div class="field-label">Notification Type</div>
+                </div>
+                <div class="notif-type-grid">
+                  <div class="notif-type-btn selected" data-notif-type="broadcast">
+                    <i class="fa-solid fa-bullhorn"></i>
+                    <span>Broadcast</span>
+                  </div>
+                  <div class="notif-type-btn" data-notif-type="targeted">
+                    <i class="fa-solid fa-user-tag"></i>
+                    <span>Targeted</span>
+                  </div>
+                  <div class="notif-type-btn" data-notif-type="system">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>System</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-grid single" style="gap:12px;">
+                <div class="form-group" id="targetUserGroup" style="display:none;">
+                  <label for="notifTargetUser">Target User</label>
+                  <select id="notifTargetUser">
+                    <option value="">Select a user...</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="notifTitle">Title</label>
+                  <input type="text" id="notifTitle" placeholder="Notification title" maxlength="100" />
+                </div>
+                <div class="form-group">
+                  <label for="notifPriority">Priority</label>
+                  <select id="notifPriority">
+                    <option value="normal">Normal</option>
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+                <div class="form-group full">
+                  <label for="notifMessage">Message</label>
+                  <textarea id="notifMessage" placeholder="Write your notification message here..."
+                    maxlength="500"></textarea>
+                  <div class="char-count"><span id="charCount">0</span>/500</div>
+                </div>
+              </div>
+              <button class="btn btn-purple" style="width:100%; justify-content:center; margin-top:8px;"
+                id="sendNotificationBtn">
+                <i class="fa-solid fa-paper-plane"></i> Send Notification
+              </button>
+            </div>
+          </div>
+
+          <!-- Sent History -->
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Sent Notifications</span>
+              <button class="btn btn-outline btn-sm" id="clearNotifHistoryBtn">Clear</button>
+            </div>
+            <div id="notifHistoryList" style="max-height:520px; overflow-y:auto;">
+              <div class="empty-state"><i class="fa-solid fa-bell-slash"></i>
+                <p>No notifications sent yet.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ══ FEEDBACK PAGE ══ -->
+      <div class="page" id="page-feedback">
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">User Feedback & Reports</span>
+            <button class="btn btn-outline btn-sm" id="exportFeedbackBtn">
+              <i class="fa-solid fa-file-csv"></i> Export
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>User</th>
+                  <th>Type</th>
+                  <th>Message</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="feedbackBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SETTINGS PAGE ══ -->
+      <div class="page" id="page-settings">
+
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <span class="settings-section-title">Platform Configuration</span>
+          </div>
+          <div class="settings-section-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="settingPlatformName">Platform Name</label>
+                <input type="text" id="settingPlatformName" value="SME Record" />
+              </div>
+              <div class="form-group">
+                <label for="settingDefaultCurrency">Default Currency</label>
+                <select id="settingDefaultCurrency">
+                  <option value="NGN">₦ Nigerian Naira</option>
+                  <option value="USD">$ US Dollar</option>
+                  <option value="GHS">GH₵ Ghana Cedi</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <label for="settingSupportEmail">Support Email</label>
+                <input type="email" id="settingSupportEmail" placeholder="support@smerecord.com" />
+              </div>
+            </div>
+            <button class="btn btn-purple" style="margin-top:14px;" id="savePlatformSettingsBtn">
+              <i class="fa-solid fa-floppy-disk"></i> Save Settings
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <span class="settings-section-title">Feature Flags</span>
+          </div>
+          <div class="settings-section-body">
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">User Registration</div>
+                <div class="toggle-desc">Allow new users to register accounts</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="flagRegistration" checked>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Email Verification Required</div>
+                <div class="toggle-desc">Users must verify email before accessing the app</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="flagEmailVerify">
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">Maintenance Mode</div>
+                <div class="toggle-desc">Show maintenance screen to all regular users</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="flagMaintenance">
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label">CSV Export</div>
+                <div class="toggle-desc">Allow users to export their transaction data</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="flagExport" checked>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-header">
+            <span class="settings-section-title">Admin Account</span>
+          </div>
+          <div class="settings-section-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="adminNameInput">Admin Name</label>
+                <input type="text" id="adminNameInput" placeholder="Your name" />
+              </div>
+              <div class="form-group">
+                <label for="adminUsernameInput">Username</label>
+                <input type="text" id="adminUsernameInput" placeholder="Login username" autocomplete="off" />
+              </div>
+              <div class="form-group">
+                <label for="adminEmailInput">Admin Email</label>
+                <input type="email" id="adminEmailInput" placeholder="admin@smerecord.com" />
+              </div>
+              <div class="form-group">
+                <label for="adminCurrentPwd">Current Password</label>
+                <input type="password" id="adminCurrentPwd" placeholder="Current password" />
+              </div>
+              <div class="form-group full">
+                <label for="adminNewPwd">New Password</label>
+                <input type="password" id="adminNewPwd" placeholder="New password (optional)" />
+              </div>
+            </div>
+            <button class="btn btn-purple" style="margin-top:14px;" id="saveAdminAccountBtn">
+              <i class="fa-solid fa-floppy-disk"></i> Update Account
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ══ MAINTENANCE PAGE ══ -->
+      <div class="page" id="page-maintenance">
+        <div class="three-col" style="margin-bottom:20px;">
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Data Storage</span></div>
+            <div class="panel-body">
+              <div style="font-family:'Syne',sans-serif; font-size:28px; font-weight:800; color:var(--ink);"
+                id="storageSize">0 KB</div>
+              <div style="font-size:12px; color:var(--ink-soft); margin-top:4px;">localStorage usage</div>
+              <div style="background:var(--border); border-radius:20px; height:6px; margin-top:12px; overflow:hidden;">
+                <div id="storageBar"
+                  style="background:linear-gradient(90deg,var(--purple),var(--blue)); height:6px; border-radius:20px; width:0%; transition:width 0.5s;">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Record Counts</span></div>
+            <div class="panel-body" id="recordCounts" style="display:flex; flex-direction:column; gap:8px;"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">Quick Actions</span></div>
+            <div class="panel-body" style="display:flex; flex-direction:column; gap:10px;">
+              <button class="btn btn-purple" id="exportFullBackupBtn">
+                <i class="fa-solid fa-download"></i> Full Backup (JSON)
+              </button>
+              <button class="btn btn-green" id="importBackupBtn">
+                <i class="fa-solid fa-upload"></i> Import Backup
+              </button>
+              <input type="file" id="importFile" style="display:none;" accept=".json" />
+            </div>
+          </div>
+        </div>
+
+        <div class="danger-zone">
+          <div class="danger-zone-header"><i class="fa-solid fa-triangle-exclamation"
+              style="margin-right:6px;"></i>Danger Zone</div>
+          <div class="panel-body" style="display:flex; flex-direction:column; gap:10px;">
+            <div
+              style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--surface-3);">
+              <div>
+                <div style="font-size:13px; font-weight:600; color:var(--ink);">Clear All Transactions</div>
+                <div style="font-size:11.5px; color:var(--ink-soft);">Permanently delete all transaction records</div>
+              </div>
+              <button class="btn btn-red" id="clearAllTransactionsBtn">Clear Transactions</button>
+            </div>
+            <div
+              style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--surface-3);">
+              <div>
+                <div style="font-size:13px; font-weight:600; color:var(--ink);">Delete All Users</div>
+                <div style="font-size:11.5px; color:var(--ink-soft);">Remove all user accounts (keeps admin)</div>
+              </div>
+              <button class="btn btn-red" id="deleteAllUsersBtn">Delete Users</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0;">
+              <div>
+                <div style="font-size:13px; font-weight:600; color:var(--ink);">Nuclear Reset</div>
+                <div style="font-size:11.5px; color:var(--ink-soft);">Wipe all platform data completely</div>
+              </div>
+              <button class="btn btn-red" id="nuclearResetBtn">Reset Everything</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end page-content -->
+  </main><!-- end main-wrap -->
+
+  <!-- USER DETAIL PANEL -->
+  <div class="user-detail" id="userDetail">
+    <div class="detail-header">
+      <span style="font-family:'Syne',sans-serif; font-size:15px; font-weight:700;">User Details</span>
+      <button class="detail-close" id="closeUserDetailBtn"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="user-profile-block">
+      <div class="big-avatar" id="detailAvatar">?</div>
+      <div class="profile-name" id="detailName">—</div>
+      <div class="profile-biz" id="detailBiz">—</div>
+      <div class="profile-email" id="detailEmail">—</div>
+      <div style="margin-top:12px; display:flex; gap:8px;" id="detailStatusPill"></div>
+    </div>
+    <div class="detail-stats">
+      <div class="detail-stat">
+        <div class="detail-stat-val" id="detailTxCount">0</div>
+        <div class="detail-stat-lbl">Transactions</div>
+      </div>
+      <div class="detail-stat">
+        <div class="detail-stat-val" id="detailBooks">0</div>
+        <div class="detail-stat-lbl">Record Books</div>
+      </div>
+      <div class="detail-stat">
+        <div class="detail-stat-val" id="detailCategories">0</div>
+        <div class="detail-stat-lbl">Categories</div>
+      </div>
+    </div>
+    <!-- NDPR notice: individual amounts are not shown to admins -->
+    <div style="font-size:11px;color:var(--ink-soft);text-align:center;padding:6px 12px;background:var(--surface-2);border-radius:8px;margin-bottom:10px;">
+      <i class="fa-solid fa-shield-halved" style="margin-right:4px;"></i>
+      Financial amounts are private. Only transaction count is shown for support purposes.
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Account Info</div>
+      <div class="detail-row">
+        <span class="detail-key">User ID</span>
+        <span class="detail-val" id="detailId" style="font-size:10.5px; font-family:monospace;">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">Joined</span>
+        <span class="detail-val" id="detailJoined">—</span>
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Actions</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button class="btn btn-purple" style="justify-content:center;" id="detailNotifyBtn">
+          <i class="fa-solid fa-bell"></i> Send Notification
+        </button>
+        <button class="btn btn-outline" style="justify-content:center; color:var(--gold);" id="detailResetBtn">
+          <i class="fa-solid fa-rotate-left"></i> Reset User Data
+        </button>
+        <button class="btn" style="justify-content:center; background:var(--red-bg); color:var(--red);"
+          id="detailSuspendBtn">
+          <i class="fa-solid fa-ban"></i> Suspend User
+        </button>
+        <button class="btn btn-red" style="justify-content:center;" id="detailDeleteBtn">
+          <i class="fa-solid fa-trash"></i> Delete User
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Send Notification -->
+  <div class="modal-overlay" id="notifModal">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Send Notification</span>
+        <button class="modal-close" id="notifModalCloseBtn" data-action="closeModal" data-target="notifModal"
+          aria-label="Close notification modal">&times;</button>
+      </div>
+      <div class="form-grid single" style="gap:12px;">
+        <div class="form-group">
+          <label for="modalNotifTitle">Title</label>
+          <input type="text" id="modalNotifTitle" placeholder="Notification title" />
+        </div>
+        <div class="form-group">
+          <label for="modalNotifMessage">Message</label>
+          <textarea id="modalNotifMessage" placeholder="Your message..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="modalNotifPriority">Priority</label>
+          <select id="modalNotifPriority">
+            <option value="normal">Normal</option>
+            <option value="info">Info</option>
+            <option value="warning">Warning</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-purple" style="width:100%;justify-content:center;margin-top:14px;"
+        id="sendModalNotificationBtn">
+        <i class="fa-solid fa-paper-plane"></i> Send
+      </button>
+    </div>
+  </div>
+
+  <div id="toast-container" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script src="js/admin.js"></script>
+</body>
+
+</html>
